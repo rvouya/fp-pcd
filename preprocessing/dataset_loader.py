@@ -11,20 +11,20 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATASET_ROOT = PROJECT_ROOT / "dataset"
+DATASET_ROOT = PROJECT_ROOT / "data"
 
-ORIGINAL_IMG_DIR = DATASET_ROOT / "original" / "fp" / "balanced"
-ORIGINAL_LABELS_CSV = DATASET_ROOT / "original" / "balanced_prompts_fixed.csv"
+# Clean reference images (ground truth) share the same filenames and labels CSV
+# as the corrupted set.
+ORIGINAL_IMG_DIR = DATASET_ROOT / "groundtruth"
+ORIGINAL_LABELS_CSV = DATASET_ROOT / "balanced_2500.csv"
 
-CORRUPTED_BALANCED_IMG_DIR = (
-    DATASET_ROOT / "corrupted" / "combined" / "combined" / "balanced" / "balanced"
-)
-CORRUPTED_BALANCED_LABELS_CSV = DATASET_ROOT / "corrupted" / "balanced_2500.csv"
+CORRUPTED_BALANCED_IMG_DIR = DATASET_ROOT / "corrupted"
+CORRUPTED_BALANCED_LABELS_CSV = DATASET_ROOT / "balanced_2500.csv"
 
-CORRUPTED_IMBALANCED_IMG_DIR = (
-    DATASET_ROOT / "corrupted" / "combined" / "combined" / "Imbalanced" / "imbalanced"
-)
-CORRUPTED_IMBALANCED_LABELS_CSV = DATASET_ROOT / "corrupted" / "imbalanced_2500.csv"
+# No separate imbalanced split shipped with the current data/ folder; fall back
+# to the balanced set so the API stays callable.
+CORRUPTED_IMBALANCED_IMG_DIR = DATASET_ROOT / "corrupted"
+CORRUPTED_IMBALANCED_LABELS_CSV = DATASET_ROOT / "balanced_2500.csv"
 
 
 class DatasetLoader:
