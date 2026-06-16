@@ -1,5 +1,13 @@
 dataset/
-output/
+
+# Preprocessing outputs with images
+output/01_preprocessing
+
+# Frequency filtering outputs with images
+output/03_frequency_filtering/butterworth_lpf
+output/03_frequency_filtering/butterworth_hpf
+output/03_frequency_filtering/fft
+output/03_frequency_filtering/inverse_fft
 
 *.pth
 *.pt
