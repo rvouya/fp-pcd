@@ -50,7 +50,10 @@ class ExperimentEvaluator:
             DataFrame with columns [image_name, stage, psnr, ssim].
         """
         if original_dir is None:
-            original_dir = OUTPUT_ROOT / "01_preprocessing" / "normalized"
+            # Clean reference (groundtruth, resized+normalized the same way as the
+            # corrupted set) so PSNR/SSIM measure restoration quality, not just
+            # "different from the corrupted input".
+            original_dir = OUTPUT_ROOT / "01_preprocessing" / "groundtruth_normalized"
 
         if stage_dirs is None:
             stage_dirs = {
@@ -58,10 +61,14 @@ class ExperimentEvaluator:
                 "spatial_unsharp": OUTPUT_ROOT / "02_spatial_filtering" / "unsharp",
                 "freq_lpf": OUTPUT_ROOT / "03_frequency_filtering" / "butterworth_lpf",
                 "freq_hpf": OUTPUT_ROOT / "03_frequency_filtering" / "butterworth_hpf",
-                "roi_clahe": OUTPUT_ROOT / "04_roi_enhancement" / "clahe",
-                "roi_tophat": OUTPUT_ROOT / "04_roi_enhancement" / "top_hat",
-                "roi_opening": OUTPUT_ROOT / "04_roi_enhancement" / "opening",
-                "roi_closing": OUTPUT_ROOT / "04_roi_enhancement" / "closing",
+                "roi_spatial_clahe": OUTPUT_ROOT / "04_roi_enhancement" / "spatial" / "clahe",
+                "roi_spatial_tophat": OUTPUT_ROOT / "04_roi_enhancement" / "spatial" / "top_hat",
+                "roi_spatial_opening": OUTPUT_ROOT / "04_roi_enhancement" / "spatial" / "opening",
+                "roi_spatial_closing": OUTPUT_ROOT / "04_roi_enhancement" / "spatial" / "closing",
+                "roi_frequency_clahe": OUTPUT_ROOT / "04_roi_enhancement" / "frequency" / "clahe",
+                "roi_frequency_tophat": OUTPUT_ROOT / "04_roi_enhancement" / "frequency" / "top_hat",
+                "roi_frequency_opening": OUTPUT_ROOT / "04_roi_enhancement" / "frequency" / "opening",
+                "roi_frequency_closing": OUTPUT_ROOT / "04_roi_enhancement" / "frequency" / "closing",
             }
 
         evaluator = ImageMetricsEvaluator(self.output_dir)
@@ -133,6 +140,19 @@ class ExperimentEvaluator:
             json.dump(data, f, indent=2, default=str)
         logger.info("JSON saved: %s", path)
         return path
+
+    def load_classification_results(self, csv_path: Optional[Path] = None) -> None:
+        """Load a previously exported classification metrics CSV into this evaluator.
+
+        Lets a later, separate evaluation run (e.g. after classification training
+        finished in its own process) merge into one combined summary report.
+        """
+        path = csv_path or (self.output_dir / "classification_metrics" / "all_scenarios.csv")
+        if path.exists():
+            self._classification_results.append(pd.read_csv(path))
+            logger.info("Loaded existing classification results from %s", path)
+        else:
+            logger.info("No existing classification results at %s, skipping", path)
 
     def export_all(self) -> None:
         """Write consolidated CSVs and JSON summaries for all collected results."""

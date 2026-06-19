@@ -14,7 +14,7 @@
     "sweep_ssim": 0.8571455731069964,
     "fullset_psnr": 24.513464372458852,
     "fullset_ssim": 0.8538076326405523,
-    "output_dir": "output\\03_frequency_filtering\\butterworth_lpf"
+    "output_dir": "output/03_frequency_filtering/butterworth_lpf"
   },
   "butterworth_hpf": {
     "params": {
@@ -23,6 +23,6 @@
     },
     "scored": false,
     "note": "produced for report only; not scored vs groundtruth",
-    "output_dir": "output\\03_frequency_filtering\\butterworth_hpf"
+    "output_dir": "output/03_frequency_filtering/butterworth_hpf"
   }
 }

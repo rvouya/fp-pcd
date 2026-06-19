@@ -5,63 +5,27 @@ import time
 from pathlib import Path
 
 import cv2
-import pandas as pd
 from tqdm import tqdm
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from preprocessing.preprocessor import Preprocessor  # noqa: E402
 from filtering_spatial.spatial_filter import SpatialFilter  # noqa: E402
+from pipeline_paths import (  # noqa: E402
+    CORRUPTED_DIR,
+    NORMALIZED_DIR,
+    ensure_normalized,
+    list_image_paths,
+)
 
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(message)s")
 
 # ----------------------------------------------------------------------
 # Paths (kept in sync with classification/config.py resolve_image_dir())
 # ----------------------------------------------------------------------
-CORRUPTED_DIR = PROJECT_ROOT / "data" / "corrupted"
-LABELS_CSV = PROJECT_ROOT / "data" / "balanced_2500.csv"
-
-NORMALIZED_DIR = PROJECT_ROOT / "output" / "01_preprocessing" / "normalized"
 SPATIAL_DIR = PROJECT_ROOT / "output" / "02_spatial_filtering"
 GAUSSIAN_DIR = SPATIAL_DIR / "gaussian"
 UNSHARP_DIR = SPATIAL_DIR / "unsharp"
-
-
-def list_image_paths(limit: int | None) -> list[Path]:
-    """Resolve corrupted image paths in the CSV's order."""
-    df = pd.read_csv(LABELS_CSV)
-    names = df["Image Index"].tolist()
-    paths = [CORRUPTED_DIR / n for n in names if (CORRUPTED_DIR / n).exists()]
-    missing = len(names) - len(paths)
-    if missing:
-        logging.warning("%d images listed in CSV not found on disk", missing)
-    return paths[:limit] if limit else paths
-
-
-def step_preprocess(paths: list[Path], size: int, norm: str, force: bool) -> None:
-    pre = Preprocessor()
-    NORMALIZED_DIR.mkdir(parents=True, exist_ok=True)
-
-    todo = paths if force else [p for p in paths if not (NORMALIZED_DIR / p.name).exists()]
-    if not todo:
-        print(f"[preprocess] {len(paths)} images already normalized -> skip")
-        return
-
-    t0 = time.perf_counter()
-    failed = 0
-    for src in tqdm(todo, desc=f"preprocess {size}px/{norm}", unit="img"):
-        img = cv2.imread(str(src), cv2.IMREAD_GRAYSCALE)
-        if img is None:
-            failed += 1
-            continue
-        out = pre.process(img, target_size=(size, size), norm_method=norm)
-        pre.save(out, NORMALIZED_DIR / src.name)
-    dt = time.perf_counter() - t0
-    print(
-        f"[preprocess] {len(todo) - failed}/{len(todo)} saved in {dt:.1f}s "
-        f"({dt / max(len(todo), 1) * 1000:.1f} ms/img), failed={failed}"
-    )
 
 
 def step_spatial(
@@ -122,11 +86,11 @@ def main() -> None:
     args = ap.parse_args()
 
     print(f"corrupted source : {CORRUPTED_DIR}")
-    paths = list_image_paths(args.limit)
+    paths = list_image_paths(CORRUPTED_DIR, args.limit)
     print(f"images to process: {len(paths)}")
 
     if not args.skip_preprocess:
-        step_preprocess(paths, args.size, args.norm, args.force)
+        ensure_normalized(paths, NORMALIZED_DIR, args.size, args.norm, args.force, desc="preprocess")
     step_spatial(args.kernel_size, args.sigma, args.radius, args.amount, args.threshold)
 
 

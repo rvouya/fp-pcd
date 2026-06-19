@@ -1,0 +1,10 @@
+{
+  "scenario": "spatial",
+  "accuracy": 0.364,
+  "precision_weighted": 0.3978737826945921,
+  "recall_weighted": 0.364,
+  "f1_weighted": 0.3652790644997707,
+  "precision_macro": 0.3832714905122663,
+  "recall_macro": 0.3607000083984211,
+  "f1_macro": 0.3582010664273907
+}

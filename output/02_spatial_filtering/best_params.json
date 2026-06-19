@@ -1,0 +1,31 @@
+{
+  "sweep_size": 200,
+  "preprocess": {
+    "size": 224,
+    "norm": "minmax"
+  },
+  "selection": "average rank of PSNR and SSIM (lower is better)",
+  "gaussian": {
+    "params": {
+      "kernel_size": 11,
+      "sigma": 1.0
+    },
+    "sweep_psnr": 25.43122364589345,
+    "sweep_ssim": 0.860916072085741,
+    "fullset_psnr": 25.39909987261643,
+    "fullset_ssim": 0.8580612181093685,
+    "output_dir": "output/02_spatial_filtering/gaussian"
+  },
+  "unsharp": {
+    "params": {
+      "radius": 0.5,
+      "amount": 1.5,
+      "threshold": 10
+    },
+    "sweep_psnr": 25.43398733459727,
+    "sweep_ssim": 0.7871618991982845,
+    "fullset_psnr": 25.38194152381124,
+    "fullset_ssim": 0.7869949259669509,
+    "output_dir": "output/02_spatial_filtering/unsharp"
+  }
+}

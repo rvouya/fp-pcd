@@ -1,13 +1,22 @@
 dataset/
+data/
 
 # Preprocessing outputs with images
 output/01_preprocessing
+
+# Spatial filtering outputs with images
+output/02_spatial_filtering/gaussian
+output/02_spatial_filtering/unsharp
 
 # Frequency filtering outputs with images
 output/03_frequency_filtering/butterworth_lpf
 output/03_frequency_filtering/butterworth_hpf
 output/03_frequency_filtering/fft
 output/03_frequency_filtering/inverse_fft
+
+# ROI enhancement outputs with images
+output/04_roi_enhancement/spatial
+output/04_roi_enhancement/frequency
 
 *.pth
 *.pt

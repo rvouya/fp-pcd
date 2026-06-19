@@ -75,7 +75,7 @@ class ClassificationConfig:
             "original": PROJECT_ROOT / "output" / "01_preprocessing" / "normalized",
             "spatial": PROJECT_ROOT / "output" / "02_spatial_filtering" / "gaussian",
             "frequency": PROJECT_ROOT / "output" / "03_frequency_filtering" / "butterworth_lpf",
-            "spatial_enhanced": PROJECT_ROOT / "output" / "04_roi_enhancement" / "clahe",
-            "frequency_enhanced": PROJECT_ROOT / "output" / "04_roi_enhancement" / "clahe",
+            "spatial_enhanced": PROJECT_ROOT / "output" / "04_roi_enhancement" / "spatial" / "clahe",
+            "frequency_enhanced": PROJECT_ROOT / "output" / "04_roi_enhancement" / "frequency" / "clahe",
         }
         return scenario_map[self.scenario]

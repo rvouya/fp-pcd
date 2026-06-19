@@ -1,0 +1,27 @@
+============================================================
+EXPERIMENT SUMMARY REPORT
+============================================================
+
+IMAGE QUALITY METRICS (mean per stage):
+                          psnr    ssim
+stage                                 
+freq_hpf                4.7864  0.0523
+freq_lpf               24.5135  0.8538
+roi_frequency_clahe    20.1462  0.7249
+roi_frequency_closing  19.1553  0.7175
+roi_frequency_opening  19.7407  0.7228
+roi_frequency_tophat    5.2838  0.1402
+roi_spatial_clahe      20.7645  0.7065
+roi_spatial_closing    19.5859  0.7207
+roi_spatial_opening    19.7920  0.7242
+roi_spatial_tophat      5.3759  0.1509
+spatial_gaussian       25.3991  0.8581
+spatial_unsharp        25.3819  0.7870
+
+CLASSIFICATION RESULTS:
+          scenario  accuracy  f1_weighted  f1_macro
+          original     0.358     0.359025  0.351078
+           spatial     0.364     0.365279  0.358201
+         frequency     0.338     0.321944  0.317428
+  spatial_enhanced     0.308     0.311058  0.305108
+frequency_enhanced     0.320     0.319491  0.310807
