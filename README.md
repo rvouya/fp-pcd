@@ -2,6 +2,9 @@
 
 Chest X-Ray image processing pipeline comparing spatial filtering, frequency filtering, ROI enhancement, and classification performance against a clean-groundtruth ceiling baseline.
 
+**Dataset & full pipeline outputs (Hugging Face):** https://huggingface.co/datasets/jeremymboe/datasetandoutput_fpPCD_Xray/tree/main
+Contains the raw `data/` (corrupted + groundtruth + labels) and every generated `output/` artifact (filtered/enhanced images, classification logs/metrics, evaluation reports) — not committed to this repo, see §2 and §6.
+
 ---
 
 ## 1. Project Description
