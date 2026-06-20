@@ -1,10 +1,14 @@
-"""Batch ROI enhancement driver (CLAHE + morphological ops).
+"""Batch ROI enhancement driver (CLAHE + morphological ops + histeq + gamma).
 
 Runs on top of stage-2 (spatial/gaussian) and stage-3 (frequency/butterworth_lpf)
-outputs to produce the "spatial_enhanced" and "frequency_enhanced" classification
-scenarios. Produces:
-    output/04_roi_enhancement/spatial/{clahe,top_hat,opening,closing}/
-    output/04_roi_enhancement/frequency/{clahe,top_hat,opening,closing}/
+outputs to produce the enhancement-based classification scenarios
+(04_spatial_enhanced / 05_frequency_enhanced for CLAHE, plus 06-09 for histeq and
+gamma). Produces:
+    output/04_roi_enhancement/spatial/{clahe,top_hat,opening,closing,histeq,gamma}/
+    output/04_roi_enhancement/frequency/{clahe,top_hat,opening,closing,histeq,gamma}/
+
+histeq (global histogram equalization) and gamma (adaptive gamma correction) are
+independent alternative enhancement methods, not chained through CLAHE.
 """
 
 import argparse
@@ -44,7 +48,8 @@ def run_source(
     n = len(paths)
     print(
         f"[roi:{label}] {n} images x{len(saved)} modes in {dt:.1f}s "
-        f"({dt / max(n, 1) * 1000:.1f} ms/img) -> {out_dir}/{{clahe,top_hat,opening,closing}}"
+        f"({dt / max(n, 1) * 1000:.1f} ms/img) -> "
+        f"{out_dir}/{{clahe,top_hat,opening,closing,histeq,gamma}}"
     )
 
 
@@ -59,6 +64,10 @@ def main() -> None:
         "--morph-kernel", type=int, default=15, help="morphological kernel size, default 15"
     )
     ap.add_argument(
+        "--gamma", type=float, default=0.0,
+        help="fixed gamma for the gamma mode; <=0 (default) picks adaptive per-image gamma",
+    )
+    ap.add_argument(
         "--source",
         choices=("spatial", "frequency", "both"),
         default="both",
@@ -70,6 +79,7 @@ def main() -> None:
         clip_limit=args.clip_limit,
         tile_grid_size=(args.tile_grid, args.tile_grid),
         morph_kernel_size=args.morph_kernel,
+        gamma=args.gamma,
     )
 
     if args.source in ("spatial", "both"):

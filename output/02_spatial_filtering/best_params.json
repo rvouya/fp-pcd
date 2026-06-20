@@ -4,28 +4,30 @@
     "size": 224,
     "norm": "minmax"
   },
-  "selection": "average rank of PSNR and SSIM (lower is better)",
+  "selection": "average rank of PSNR, SSIM and detail-preservation (lower is better)",
   "gaussian": {
     "params": {
-      "kernel_size": 11,
-      "sigma": 1.0
+      "kernel_size": 3,
+      "sigma": 0.5
     },
-    "sweep_psnr": 25.43122364589345,
-    "sweep_ssim": 0.860916072085741,
-    "fullset_psnr": 25.39909987261643,
-    "fullset_ssim": 0.8580612181093685,
+    "sweep_psnr": 25.537886553893912,
+    "sweep_ssim": 0.8218564358016035,
+    "sweep_detail_ratio": 0.45061903953524507,
+    "fullset_psnr": 25.491443792678883,
+    "fullset_ssim": 0.8206873106977685,
     "output_dir": "output/02_spatial_filtering/gaussian"
   },
   "unsharp": {
     "params": {
       "radius": 0.5,
-      "amount": 1.5,
+      "amount": 2.0,
       "threshold": 10
     },
-    "sweep_psnr": 25.43398733459727,
-    "sweep_ssim": 0.7871618991982845,
-    "fullset_psnr": 25.38194152381124,
-    "fullset_ssim": 0.7869949259669509,
+    "sweep_psnr": 25.43318664820119,
+    "sweep_ssim": 0.7871673257130911,
+    "sweep_detail_ratio": 1.0006598566520202,
+    "fullset_psnr": 25.381121952090147,
+    "fullset_ssim": 0.7869966895802054,
     "output_dir": "output/02_spatial_filtering/unsharp"
   }
 }

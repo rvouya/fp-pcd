@@ -15,6 +15,28 @@ logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_ROOT = PROJECT_ROOT / "output"
 
+# Canonical pipeline-step order for the image-quality report, so "step N image
+# quality" lines up with "step N classification accuracy" (spatial, then
+# frequency, then ROI enhancement spatial-source then frequency-source).
+STAGE_ORDER: List[str] = [
+    "spatial_gaussian",
+    "spatial_unsharp",
+    "freq_lpf",
+    "freq_hpf",
+    "roi_spatial_clahe",
+    "roi_spatial_tophat",
+    "roi_spatial_opening",
+    "roi_spatial_closing",
+    "roi_spatial_histeq",
+    "roi_spatial_gamma",
+    "roi_frequency_clahe",
+    "roi_frequency_tophat",
+    "roi_frequency_opening",
+    "roi_frequency_closing",
+    "roi_frequency_histeq",
+    "roi_frequency_gamma",
+]
+
 
 class ExperimentEvaluator:
     """Aggregate all evaluation results across pipeline stages and scenarios.
@@ -65,10 +87,14 @@ class ExperimentEvaluator:
                 "roi_spatial_tophat": OUTPUT_ROOT / "04_roi_enhancement" / "spatial" / "top_hat",
                 "roi_spatial_opening": OUTPUT_ROOT / "04_roi_enhancement" / "spatial" / "opening",
                 "roi_spatial_closing": OUTPUT_ROOT / "04_roi_enhancement" / "spatial" / "closing",
+                "roi_spatial_histeq": OUTPUT_ROOT / "04_roi_enhancement" / "spatial" / "histeq",
+                "roi_spatial_gamma": OUTPUT_ROOT / "04_roi_enhancement" / "spatial" / "gamma",
                 "roi_frequency_clahe": OUTPUT_ROOT / "04_roi_enhancement" / "frequency" / "clahe",
                 "roi_frequency_tophat": OUTPUT_ROOT / "04_roi_enhancement" / "frequency" / "top_hat",
                 "roi_frequency_opening": OUTPUT_ROOT / "04_roi_enhancement" / "frequency" / "opening",
                 "roi_frequency_closing": OUTPUT_ROOT / "04_roi_enhancement" / "frequency" / "closing",
+                "roi_frequency_histeq": OUTPUT_ROOT / "04_roi_enhancement" / "frequency" / "histeq",
+                "roi_frequency_gamma": OUTPUT_ROOT / "04_roi_enhancement" / "frequency" / "gamma",
             }
 
         evaluator = ImageMetricsEvaluator(self.output_dir)
@@ -185,9 +211,20 @@ class ExperimentEvaluator:
 
         if self._image_results:
             df_img = pd.concat(self._image_results, ignore_index=True)
-            lines.append("IMAGE QUALITY METRICS (mean per stage):")
-            summary = df_img.groupby("stage")[["psnr", "ssim"]].mean().round(4)
-            lines.append(summary.to_string())
+            lines.append("IMAGE QUALITY METRICS (mean +/- std per stage):")
+            grouped = df_img.groupby("stage")[["psnr", "ssim"]].agg(["mean", "std"])
+            # Order stages by pipeline step; unknown stages fall to the end.
+            order = {name: i for i, name in enumerate(STAGE_ORDER)}
+            ordered_stages = sorted(grouped.index, key=lambda s: order.get(s, len(order)))
+            lines.append(f"{'stage':<24}{'PSNR (mean +/- std)':<26}{'SSIM (mean +/- std)':<26}")
+            for stage in ordered_stages:
+                psnr_m = grouped.loc[stage, ("psnr", "mean")]
+                psnr_s = grouped.loc[stage, ("psnr", "std")]
+                ssim_m = grouped.loc[stage, ("ssim", "mean")]
+                ssim_s = grouped.loc[stage, ("ssim", "std")]
+                psnr_str = f"{psnr_m:.2f} +/- {0.0 if pd.isna(psnr_s) else psnr_s:.2f}"
+                ssim_str = f"{ssim_m:.4f} +/- {0.0 if pd.isna(ssim_s) else ssim_s:.4f}"
+                lines.append(f"{stage:<24}{psnr_str:<26}{ssim_str:<26}")
             lines.append("")
 
         if self._classification_results:

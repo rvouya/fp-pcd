@@ -4,21 +4,22 @@
     "size": 224,
     "norm": "minmax"
   },
-  "selection": "average rank of PSNR and SSIM (lower is better)",
+  "selection": "average rank of PSNR, SSIM and detail-preservation (lower is better)",
   "butterworth_lpf": {
     "params": {
-      "cutoff": 30.0,
+      "cutoff": 80.0,
       "order": 2
     },
-    "sweep_psnr": 24.55700999705299,
-    "sweep_ssim": 0.8571455731069964,
-    "fullset_psnr": 24.513464372458852,
-    "fullset_ssim": 0.8538076326405523,
+    "sweep_psnr": 25.283961153612463,
+    "sweep_ssim": 0.8224361847853559,
+    "sweep_detail_ratio": 0.5770644659581298,
+    "fullset_psnr": 25.233218242393516,
+    "fullset_ssim": 0.8211969562050945,
     "output_dir": "output/03_frequency_filtering/butterworth_lpf"
   },
   "butterworth_hpf": {
     "params": {
-      "cutoff": 30.0,
+      "cutoff": 80.0,
       "order": 2
     },
     "scored": false,

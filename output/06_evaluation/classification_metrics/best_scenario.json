@@ -1,10 +1,10 @@
 {
-  "scenario": "original",
-  "accuracy": 0.404,
-  "precision_weighted": 0.41376034667087297,
-  "recall_weighted": 0.404,
-  "f1_weighted": 0.40629787468956396,
-  "precision_macro": 0.40224115553062917,
-  "recall_macro": 0.3937007642563198,
-  "f1_macro": 0.39543083116822525
+  "scenario": "03_frequency",
+  "accuracy": 0.374,
+  "precision_weighted": 0.4160370441547716,
+  "recall_weighted": 0.374,
+  "f1_weighted": 0.3793615200737926,
+  "precision_macro": 0.4024542804186672,
+  "recall_macro": 0.3714728730998572,
+  "f1_macro": 0.3707869522087448
 }

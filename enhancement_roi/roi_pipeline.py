@@ -8,21 +8,30 @@ import cv2
 import numpy as np
 
 from .clahe import CLAHEEnhancer
+from .gamma_correction import GammaCorrector
+from .histogram_eq import HistogramEqualizer
 from .morphological import MorphologicalOps
 
 logger = logging.getLogger(__name__)
 
-PipelineMode = str  # "clahe" | "clahe_tophat" | "clahe_opening" | "clahe_closing"
+# "clahe" | "clahe_tophat" | "clahe_opening" | "clahe_closing" | "histeq" | "gamma"
+PipelineMode = str
 
 
 class ROIEnhancementPipeline:
-    """Combine CLAHE and morphological ops into configurable ROI enhancement pipelines.
+    """Configurable ROI enhancement pipelines for chest X-Ray images.
+
+    CLAHE-based modes chain CLAHE with optional morphological ops; histeq and
+    gamma are independent alternative enhancement methods (not modifiers of
+    CLAHE output).
 
     Supported pipeline modes:
         - "clahe"         : CLAHE only
         - "clahe_tophat"  : CLAHE → Top-Hat
         - "clahe_opening" : CLAHE → Opening
         - "clahe_closing" : CLAHE → Closing
+        - "histeq"        : global histogram equalization (independent)
+        - "gamma"         : adaptive gamma correction (independent)
     """
 
     def __init__(
@@ -30,10 +39,13 @@ class ROIEnhancementPipeline:
         clip_limit: float = 2.0,
         tile_grid_size: Tuple[int, int] = (8, 8),
         morph_kernel_size: int = 15,
+        gamma: float = 0.0,
     ) -> None:
         self.clahe = CLAHEEnhancer(clip_limit, tile_grid_size)
         self.morph = MorphologicalOps()
         self.morph_kernel_size = morph_kernel_size
+        self.histeq = HistogramEqualizer()
+        self.gamma = GammaCorrector(gamma)
 
     # ------------------------------------------------------------------
     # Pipeline variants
@@ -58,12 +70,21 @@ class ROIEnhancementPipeline:
         enhanced = self.clahe.apply(image)
         return self.morph.closing(enhanced, self.morph_kernel_size)
 
+    def histeq_only(self, image: np.ndarray) -> np.ndarray:
+        """Apply global histogram equalization (independent of CLAHE)."""
+        return self.histeq.apply(image)
+
+    def gamma_only(self, image: np.ndarray) -> np.ndarray:
+        """Apply adaptive gamma correction (independent of CLAHE)."""
+        return self.gamma.apply(image)
+
     def apply(self, image: np.ndarray, mode: PipelineMode = "clahe") -> np.ndarray:
         """Apply a named pipeline mode.
 
         Args:
             image: uint8 grayscale image.
-            mode: One of "clahe", "clahe_tophat", "clahe_opening", "clahe_closing".
+            mode: One of "clahe", "clahe_tophat", "clahe_opening",
+                "clahe_closing", "histeq", "gamma".
 
         Returns:
             Enhanced image.
@@ -73,6 +94,8 @@ class ROIEnhancementPipeline:
             "clahe_tophat": self.clahe_tophat,
             "clahe_opening": self.clahe_opening,
             "clahe_closing": self.clahe_closing,
+            "histeq": self.histeq_only,
+            "gamma": self.gamma_only,
         }
         if mode not in dispatch:
             raise ValueError(f"Unknown mode {mode!r}. Choose from {list(dispatch)}")
@@ -83,7 +106,7 @@ class ROIEnhancementPipeline:
 
         Returns:
             Dict with keys "original", "clahe", "clahe_tophat",
-            "clahe_opening", "clahe_closing".
+            "clahe_opening", "clahe_closing", "histeq", "gamma".
         """
         return {
             "original": image,
@@ -91,6 +114,8 @@ class ROIEnhancementPipeline:
             "clahe_tophat": self.clahe_tophat(image),
             "clahe_opening": self.clahe_opening(image),
             "clahe_closing": self.clahe_closing(image),
+            "histeq": self.histeq_only(image),
+            "gamma": self.gamma_only(image),
         }
 
     # ------------------------------------------------------------------
@@ -119,16 +144,21 @@ class ROIEnhancementPipeline:
             Dict mapping mode name to list of saved output paths.
         """
         if modes is None:
-            modes = ["clahe", "clahe_tophat", "clahe_opening", "clahe_closing"]
+            modes = [
+                "clahe", "clahe_tophat", "clahe_opening", "clahe_closing",
+                "histeq", "gamma",
+            ]
 
         out_dirs = {
             "clahe": output_dir / "clahe",
             "clahe_tophat": output_dir / "top_hat",
             "clahe_opening": output_dir / "opening",
             "clahe_closing": output_dir / "closing",
+            "histeq": output_dir / "histeq",
+            "gamma": output_dir / "gamma",
         }
-        for d in out_dirs.values():
-            d.mkdir(parents=True, exist_ok=True)
+        for m in modes:
+            out_dirs[m].mkdir(parents=True, exist_ok=True)
 
         saved: Dict[str, List[Path]] = {m: [] for m in modes}
 

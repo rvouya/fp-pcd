@@ -1,11 +1,22 @@
-"""Batch classification driver: train + evaluate ResNet18 across all 5 scenarios.
+"""Batch classification driver: train + evaluate ResNet18 across all scenarios.
 
 Reads images already produced by the upstream stages:
-    original           <- output/01_preprocessing/normalized
-    spatial             <- output/02_spatial_filtering/gaussian
-    frequency           <- output/03_frequency_filtering/butterworth_lpf
-    spatial_enhanced    <- output/04_roi_enhancement/spatial/clahe
-    frequency_enhanced  <- output/04_roi_enhancement/frequency/clahe
+    00_groundtruth        <- output/01_preprocessing/groundtruth_normalized
+    01_original           <- output/01_preprocessing/normalized
+    02_spatial            <- output/02_spatial_filtering/gaussian
+    03_frequency          <- output/03_frequency_filtering/butterworth_lpf
+    04_spatial_enhanced   <- output/04_roi_enhancement/spatial/clahe
+    05_frequency_enhanced <- output/04_roi_enhancement/frequency/clahe
+    06_spatial_histeq     <- output/04_roi_enhancement/spatial/histeq
+    07_frequency_histeq   <- output/04_roi_enhancement/frequency/histeq
+    08_spatial_gamma      <- output/04_roi_enhancement/spatial/gamma
+    09_frequency_gamma    <- output/04_roi_enhancement/frequency/gamma
+
+The label mapping and train/val split are built ONCE from the full labels CSV
+(classification.dataset.build_canonical_split) and injected into every
+scenario's DataModule, so all scenarios share the same labels and the same
+canonical train/val membership (each only drops images missing on disk). This
+makes cross-scenario accuracy comparisons apples-to-apples.
 
 For each scenario: trains ResNet18 with early stopping, saves the best
 checkpoint + training history under output/05_classification/<scenario>/,
@@ -24,13 +35,18 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from pipeline_paths import LABELS_CSV  # noqa: E402
 from classification.config import ClassificationConfig, TRAINING_SCENARIOS  # noqa: E402
-from classification.dataset import XRayDataModule  # noqa: E402
+from classification.dataset import CanonicalSplit, XRayDataModule, build_canonical_split  # noqa: E402
 from classification.model import get_model  # noqa: E402
 from classification.trainer import Trainer  # noqa: E402
 from evaluation.evaluator import ExperimentEvaluator  # noqa: E402
 
 
-def run_scenario(scenario: str, cfg: ClassificationConfig, evaluator: ExperimentEvaluator) -> None:
+def run_scenario(
+    scenario: str,
+    cfg: ClassificationConfig,
+    evaluator: ExperimentEvaluator,
+    canonical_split: CanonicalSplit,
+) -> None:
     image_dir = cfg.resolve_image_dir()
     if not any(image_dir.glob("*.png")):
         print(f"[{scenario}] no images in {image_dir} -- run the upstream stage first, skip")
@@ -40,6 +56,7 @@ def run_scenario(scenario: str, cfg: ClassificationConfig, evaluator: Experiment
     dm = XRayDataModule(
         image_dir=image_dir,
         labels_csv=LABELS_CSV,
+        canonical_split=canonical_split,
         image_size=cfg.image_size,
         batch_size=cfg.batch_size,
         val_split=cfg.val_split,
@@ -76,9 +93,16 @@ def main() -> None:
     ap.add_argument("--epochs", type=int, default=20, help="max epochs per scenario, default 20")
     ap.add_argument("--batch-size", type=int, default=32)
     ap.add_argument("--patience", type=int, default=5, help="early stopping patience, default 5")
+    ap.add_argument("--val-split", type=float, default=0.2, help="validation fraction, default 0.2")
     args = ap.parse_args()
 
     evaluator = ExperimentEvaluator()
+
+    # Build the canonical label map + train/val split ONCE so every scenario
+    # is trained and evaluated on the same images with the same labels.
+    canonical_split = build_canonical_split(
+        LABELS_CSV, val_split=args.val_split, seed=42
+    )
 
     for scenario in args.scenarios:
         cfg = ClassificationConfig(
@@ -86,8 +110,9 @@ def main() -> None:
             num_epochs=args.epochs,
             batch_size=args.batch_size,
             patience=args.patience,
+            val_split=args.val_split,
         )
-        run_scenario(scenario, cfg, evaluator)
+        run_scenario(scenario, cfg, evaluator, canonical_split)
 
     evaluator.export_all()
     report = evaluator.generate_summary_report()

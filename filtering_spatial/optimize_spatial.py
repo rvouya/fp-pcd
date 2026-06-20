@@ -72,12 +72,32 @@ def load_gray(path: Path) -> np.ndarray:
     return cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
 
 
+def detail_ratio(output: np.ndarray, reference: np.ndarray) -> float:
+    """Laplacian-variance ratio of output vs reference (edge/detail preserved).
+
+    ~1.0 means fine texture/edges are preserved; ->0 means over-smoothed. Used
+    to stop the PSNR/SSIM sweep from chasing maximum blur, which destroys the
+    fine detail a CNN classifier needs.
+    """
+    ref_var = float(cv2.Laplacian(reference, cv2.CV_64F).var())
+    out_var = float(cv2.Laplacian(output, cv2.CV_64F).var())
+    if ref_var <= 0:
+        return 0.0
+    return out_var / ref_var
+
+
 def add_combined_rank(df: pd.DataFrame) -> pd.DataFrame:
-    """Rank by PSNR and SSIM (higher=better), best = lowest average rank."""
+    """Rank by PSNR, SSIM (higher=better) and detail preservation.
+
+    Detail is ranked by ``abs(detail_ratio - 1.0)`` ascending (closest to 1.0 =
+    best). Best overall = lowest average of the three ranks.
+    """
     df = df.copy()
     df["rank_psnr"] = df["psnr"].rank(ascending=False, method="min")
     df["rank_ssim"] = df["ssim"].rank(ascending=False, method="min")
-    df["rank_avg"] = (df["rank_psnr"] + df["rank_ssim"]) / 2.0
+    df["detail_dev"] = (df["detail_ratio"] - 1.0).abs()
+    df["rank_detail"] = df["detail_dev"].rank(ascending=True, method="min")
+    df["rank_avg"] = (df["rank_psnr"] + df["rank_ssim"] + df["rank_detail"]) / 3.0
     return df.sort_values("rank_avg").reset_index(drop=True)
 
 
@@ -91,13 +111,15 @@ def sweep_gaussian(sweep_names, kernels, sigmas) -> pd.DataFrame:
     rows = []
     combos = [(k, s) for k in kernels for s in sigmas]
     for k, s in tqdm(combos, desc="sweep gaussian", unit="combo"):
-        ps, ss = [], []
+        ps, ss, dr = [], [], []
         for inp, ref in zip(inputs, refs):
             out = glpf.apply_with_params(inp, k, s)
             ps.append(compute_psnr(ref, out))
             ss.append(compute_ssim(ref, out))
+            dr.append(detail_ratio(out, ref))
         rows.append({"kernel_size": k, "sigma": s,
-                     "psnr": float(np.mean(ps)), "ssim": float(np.mean(ss))})
+                     "psnr": float(np.mean(ps)), "ssim": float(np.mean(ss)),
+                     "detail_ratio": float(np.mean(dr))})
     return add_combined_rank(pd.DataFrame(rows))
 
 
@@ -108,13 +130,15 @@ def sweep_unsharp(sweep_names, radii, amounts, thresholds) -> pd.DataFrame:
     rows = []
     combos = [(r, a, t) for r in radii for a in amounts for t in thresholds]
     for r, a, t in tqdm(combos, desc="sweep unsharp", unit="combo"):
-        ps, ss = [], []
+        ps, ss, dr = [], [], []
         for inp, ref in zip(inputs, refs):
             out = um.apply_with_params(inp, r, a, t)
             ps.append(compute_psnr(ref, out))
             ss.append(compute_ssim(ref, out))
+            dr.append(detail_ratio(out, ref))
         rows.append({"radius": r, "amount": a, "threshold": t,
-                     "psnr": float(np.mean(ps)), "ssim": float(np.mean(ss))})
+                     "psnr": float(np.mean(ps)), "ssim": float(np.mean(ss)),
+                     "detail_ratio": float(np.mean(dr))})
     return add_combined_rank(pd.DataFrame(rows))
 
 
@@ -168,8 +192,8 @@ def main() -> None:
     ap.add_argument("--force", action="store_true", help="redo preprocessing")
     ap.add_argument("--seed", type=int, default=42, help="sweep subset sampling seed")
 
-    ap.add_argument("--kernels", default="3,5,7,11,15", help="Gaussian kernel sizes (csv)")
-    ap.add_argument("--sigmas", default="0.5,1.0,2.0,3.0", help="Gaussian sigmas (csv)")
+    ap.add_argument("--kernels", default="3,5,7,9", help="Gaussian kernel sizes (csv)")
+    ap.add_argument("--sigmas", default="0.5,1.0,1.5,2.0", help="Gaussian sigmas (csv)")
     ap.add_argument("--radii", default="0.5,1.0,2.0", help="Unsharp radii (csv)")
     ap.add_argument("--amounts", default="0.5,1.0,1.5,2.0", help="Unsharp amounts (csv)")
     ap.add_argument("--thresholds", default="0,5,10", help="Unsharp thresholds (csv)")
@@ -223,10 +247,11 @@ def main() -> None:
     best = {
         "sweep_size": n_sweep,
         "preprocess": {"size": args.size, "norm": args.norm},
-        "selection": "average rank of PSNR and SSIM (lower is better)",
+        "selection": "average rank of PSNR, SSIM and detail-preservation (lower is better)",
         "gaussian": {
             "params": {"kernel_size": int(g_best.kernel_size), "sigma": float(g_best.sigma)},
             "sweep_psnr": float(g_best.psnr), "sweep_ssim": float(g_best.ssim),
+            "sweep_detail_ratio": float(g_best.detail_ratio),
             "fullset_psnr": float(g_metrics.psnr.mean()),
             "fullset_ssim": float(g_metrics.ssim.mean()),
             "output_dir": str(GAUSSIAN_DIR.relative_to(PROJECT_ROOT)),
@@ -235,6 +260,7 @@ def main() -> None:
             "params": {"radius": float(u_best.radius), "amount": float(u_best.amount),
                        "threshold": int(u_best.threshold)},
             "sweep_psnr": float(u_best.psnr), "sweep_ssim": float(u_best.ssim),
+            "sweep_detail_ratio": float(u_best.detail_ratio),
             "fullset_psnr": float(u_metrics.psnr.mean()),
             "fullset_ssim": float(u_metrics.ssim.mean()),
             "output_dir": str(UNSHARP_DIR.relative_to(PROJECT_ROOT)),

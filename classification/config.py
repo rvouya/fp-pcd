@@ -25,11 +25,16 @@ ALL_CLASSES: List[str] = [
 ]
 
 TRAINING_SCENARIOS: List[str] = [
-    "original",
-    "spatial",
-    "frequency",
-    "spatial_enhanced",
-    "frequency_enhanced",
+    "00_groundtruth",
+    "01_original",
+    "02_spatial",
+    "03_frequency",
+    "04_spatial_enhanced",
+    "05_frequency_enhanced",
+    "06_spatial_histeq",
+    "07_frequency_histeq",
+    "08_spatial_gamma",
+    "09_frequency_gamma",
 ]
 
 
@@ -56,7 +61,7 @@ class ClassificationConfig:
     seed: int = 42
 
     # Scenario
-    scenario: str = "original"
+    scenario: str = "01_original"
 
     # Paths
     output_dir: Path = PROJECT_ROOT / "output" / "05_classification"
@@ -71,11 +76,17 @@ class ClassificationConfig:
 
     def resolve_image_dir(self) -> Path:
         """Return source image directory for the configured scenario."""
+        roi = PROJECT_ROOT / "output" / "04_roi_enhancement"
         scenario_map = {
-            "original": PROJECT_ROOT / "output" / "01_preprocessing" / "normalized",
-            "spatial": PROJECT_ROOT / "output" / "02_spatial_filtering" / "gaussian",
-            "frequency": PROJECT_ROOT / "output" / "03_frequency_filtering" / "butterworth_lpf",
-            "spatial_enhanced": PROJECT_ROOT / "output" / "04_roi_enhancement" / "spatial" / "clahe",
-            "frequency_enhanced": PROJECT_ROOT / "output" / "04_roi_enhancement" / "frequency" / "clahe",
+            "00_groundtruth": PROJECT_ROOT / "output" / "01_preprocessing" / "groundtruth_normalized",
+            "01_original": PROJECT_ROOT / "output" / "01_preprocessing" / "normalized",
+            "02_spatial": PROJECT_ROOT / "output" / "02_spatial_filtering" / "gaussian",
+            "03_frequency": PROJECT_ROOT / "output" / "03_frequency_filtering" / "butterworth_lpf",
+            "04_spatial_enhanced": roi / "spatial" / "clahe",
+            "05_frequency_enhanced": roi / "frequency" / "clahe",
+            "06_spatial_histeq": roi / "spatial" / "histeq",
+            "07_frequency_histeq": roi / "frequency" / "histeq",
+            "08_spatial_gamma": roi / "spatial" / "gamma",
+            "09_frequency_gamma": roi / "frequency" / "gamma",
         }
         return scenario_map[self.scenario]
